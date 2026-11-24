@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLOPE RADAR MONITOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3">
+  <meta name="theme-color" content="#363f82">
+</head>
+<body>
+
+<!-- ====== TOPBAR ====== -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="topbar-side"></div>
+    <div class="brand">
+      <h1>SLOPE RADAR MONITOR</h1>
+      <p class="brand-sub">Monitoring &amp; Time-of-Failure Prediction</p>
+    </div>
+    <div class="topbar-side topbar-side-right">
+      <button class="btn btn-text" type="button" id="btnLang" aria-label="Ganti bahasa">ID</button>
+      <button class="theme-toggle" type="button" id="btnTheme" role="switch" aria-checked="false" aria-label="Ganti tema">
+        <span class="ti ti-sun"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
+        <span class="ti ti-moon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ====== DATA INPUT ====== -->
+  <section class="input-section" aria-labelledby="input-title">
+    <h2 id="input-title">Data Input</h2>
+
+    <div class="input-grid">
+
+      <article class="input-col" aria-label="Gambar">
+        <div class="dropzone" id="imageDrop">
+          <p class="dz-title">Letakkan gambar di sini</p>
+          <p class="dz-sub">PNG, JPG, atau WebP. Bisa juga ditempel dengan Ctrl+V.</p>
+          <label class="btn btn-primary" for="imageFile">Browse Image</label>
+          <input class="visually-hidden" type="file" id="imageFile" accept="image/*">
+        </div>
+        <div class="image-slot" id="imageSlot" hidden>
+          <img id="imagePreview" alt="Pratinjau gambar">
+          <p class="image-meta" id="imageMeta"></p>
+          <button class="btn btn-text btn-sm" type="button" id="btnImageClear">Hapus</button>
+        </div>
+        <p class="msg" id="imageMsg" role="status">Belum ada gambar.</p>
+      </article>
+
+      <article class="input-col" aria-label="Tabel">
+        <div class="dropzone" id="tableDrop">
+          <p class="dz-title">Letakkan file di sini</p>
+          <p class="dz-sub">CSV, TSV, XLS, atau XLSX. Wajib ada kolom waktu dan displacement atau kecepatan.</p>
+          <label class="btn btn-primary" for="tableFile">Browse File</label>
+          <input class="visually-hidden" type="file" id="tableFile" accept=".csv,.tsv,.txt,.xls,.xlsx">
+        </div>
+        <p class="msg" id="tableMsg" role="status">Belum ada file yang dimuat.</p>
+      </article>
+
+      <article class="input-col" aria-label="Capture">
+        <button class="btn btn-outline capture-open" type="button" id="btnOpenChrome">Open E-Survey</button>
+        <div class="dropzone">
+          <p class="dz-title">Screen Capture</p>
+          <p class="dz-sub">Pilih tab atau jendela, lalu potong area chart yang diperlukan. Hasilnya dikirim ke kolom Gambar.</p>
+          <button class="btn btn-primary" type="button" id="btnCaptureTab">Select Tab or Window</button>
+        </div>
+        <p class="msg" id="captureMsg" role="status"></p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ====== DASHBOARD ====== -->
+  <section class="dashboard" id="dashboard" aria-label="Hasil analisis">
+
+    <div class="empty" id="dashboardEmpty">
+      <h2>Belum ada data</h2>
+      <p>Grafik, tabel prediksi, dan perkiraan waktu runtuh tampil di sini setelah data dimuat.</p>
+    </div>
+
+    <div class="dash-results" id="dashboardResults" hidden>
+
+      <div class="data-active">
+        <p class="da-label">Data aktif</p>
+        <p class="da-file" id="dashFile"></p>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><h4>Displacement</h4><p class="kpi-val" id="kpiDisp">--</p><p class="kpi-sub" id="kpiDispSub">--</p></div>
+        <div class="kpi"><h4>Velocity</h4><p class="kpi-val" id="kpiVel">--</p><p class="kpi-sub" id="kpiVelSub">--</p></div>
+        <div class="kpi"><h4>Inverse Velocity</h4><p class="kpi-val" id="kpiInv">--</p><p class="kpi-sub" id="kpiInvSub">--</p></div>
+        <div class="kpi"><h4>Acceleration</h4><p class="kpi-val" id="kpiAccel">--</p><p class="kpi-sub" id="kpiAccelSub">--</p></div>
+        <div class="kpi"><h4>Consensus ToF</h4><p class="kpi-val" id="kpiTof">--</p><p class="kpi-sub" id="kpiTofSub">--</p></div>
+      </div>
+
+      <div class="tof-banner" id="tofBanner">
+        <div class="tb-main">
+          <p class="tb-label">Consensus time of failure</p>
+          <p class="tb-time" id="tbTime">--</p>
+          <p class="tb-countdown" id="tbCountdown">Sisa waktu: --</p>
+        </div>
+        <div class="tb-detail">
+          <p class="tb-label">Detail prediksi</p>
+          <p class="tb-meta" id="tbMeta">--</p>
+          <p class="tb-latest" id="tbLatest">--</p>
+        </div>
+        <div class="tb-status"><span class="badge badge-NODATA" id="alertBadge">Belum ada data</span></div>
+      </div>
+
+      <div class="actions-panel" role="group" aria-label="Aksi analisis dan laporan">
+        <div class="ap-group">
+          <p class="ap-title">Analisis data</p>
+          <div class="ap-row">
+            <button class="btn btn-outline btn-sm" type="button" id="btnFilterReset" disabled title="Menyusul">Reset</button>
+            <label for="filterMode">Analysis Filter</label>
+            <select id="filterMode" disabled title="Menyusul">
+              <option value="none">Tanpa filter</option>
+              <option value="input">N titik terakhir</option>
+              <option value="date">Rentang tanggal</option>
+              <option value="hour">Rentang jam</option>
+            </select>
+            <span class="ap-hint" id="filterHint">semua data</span>
+            <button class="btn btn-outline btn-sm" type="button" id="btnEditData" disabled title="Menyusul">Edit data</button>
+          </div>
+        </div>
+        <div class="ap-group">
+          <p class="ap-title">Laporan &amp; pengaturan</p>
+          <div class="ap-row">
+            <button class="btn btn-outline btn-sm" type="button" id="btnThresholds" disabled title="Menyusul">Thresholds</button>
+            <button class="btn btn-outline btn-sm" type="button" id="btnEventLog" disabled title="Menyusul">Event log</button>
+            <button class="btn btn-outline btn-sm" type="button" id="btnSavePdf" disabled title="Menyusul">Export PDF</button>
+            <button class="btn btn-outline btn-sm" type="button" id="btnCopyReport" disabled title="Menyusul">Copy Report</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card"><h3 class="chart-title">Fukuzono Inverse Velocity (&alpha;=2)</h3><div class="chart-box"><canvas id="invChart"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title">Bayesian Adaptation (Radar Inverse Velocity)</h3><div class="chart-box"><canvas id="bayChart"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title">Displacement, Velocity &amp; Acceleration</h3><div class="chart-box"><canvas id="dispChart"></canvas></div></div>
+        <div class="chart-card"><h3 class="chart-title">Probability of Failure (Horizon)</h3><div class="chart-box"><canvas id="probChart"></canvas></div></div>
+      </div>
+
+      <div class="table-grid">
+        <div>
+          <h3>Fukuzono Inverse Velocity</h3>
+          <div class="table-scroll">
+            <table class="calc-table">
+              <thead><tr><th>Window</th><th>Points</th><th>Slope</th><th>Intercept</th><th>R²</th><th>SE(ToF) h</th><th>Predicted ToF</th><th>Remaining</th><th>95% CI</th><th>P(fail)</th><th>Status</th></tr></thead>
+              <tbody id="fukTbody"></tbody>
+              <tfoot id="fukTfoot"></tfoot>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3>Bayesian Regression</h3>
+          <div class="table-scroll">
+            <table class="calc-table">
+              <thead><tr><th>Window</th><th>N</th><th>B</th><th>R²</th><th>Predicted ToF</th><th>95% CrI</th><th>P(fail)</th><th>Status</th></tr></thead>
+              <tbody id="bayTbody"></tbody>
+              <tfoot id="bayTfoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <p class="agree-line" id="agreeLine">--</p>
+
+      <div class="ref-grid">
+        <div class="chart-box ref-box"><canvas id="refChartA"></canvas></div>
+        <div class="chart-box ref-box"><canvas id="refChartC"></canvas></div>
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="site-foot">Created by Faris Saifullah</footer>
+
+<!-- ====== CROP MODAL ====== -->
+<div class="modal-overlay" id="cropOverlay" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="modal modal-wide">
+    <header class="modal-head"><h2 id="cropTitle">Crop Screenshot</h2><button class="btn btn-text btn-sm" type="button" id="btnCropCancel">Cancel</button></header>
+    <div class="modal-body">
+      <div class="crop-stage" id="cropStage"><canvas id="cropCanvas"></canvas><div class="crop-rect" id="cropRect" hidden></div></div>
+      <p class="hint" id="cropInfo"></p>
+    </div>
+    <footer class="modal-foot">
+      <button class="btn btn-outline" type="button" id="btnCropReset">Reselect</button>
+      <button class="btn btn-outline" type="button" id="btnCropFull">Use Full Frame</button>
+      <button class="btn btn-primary" type="button" id="btnCropOk" disabled>Use Selection</button>
+    </footer>
+  </div>
+</div>
+
+  <!-- ====== MODAL: THRESHOLD ====== -->
+  <div class="modal-overlay" id="thModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="thTitle">
+      <div class="modal-head"><h3 id="thTitle">Threshold</h3><button type="button" class="modal-btn" id="btnThClose">Close</button></div>
+      <div class="modal-body">
+        <div class="th-grid">
+          <div><label for="thVelWarn">Velocity Warning (mm/h)</label><input type="number" step="0.01" id="thVelWarn" value="0.5"></div>
+          <div><label for="thVelDanger">Velocity Danger (mm/h)</label><input type="number" step="0.01" id="thVelDanger" value="1.0"></div>
+          <div><label for="thInvCrit">Inv. Vel. Critical (h/mm)</label><input type="number" step="0.01" id="thInvCrit" value="1.0"></div>
+          <div><label for="thDispJump">Disp. Jump Alert (mm)</label><input type="number" step="0.1" id="thDispJump" value="2.0"></div>
+          <div><label for="thMinR2">Minimum R²</label><input type="number" step="0.01" id="thMinR2" value="0.7"></div>
+          <div><label for="thHorizon">Prediction Horizon (h)</label><input type="number" step="1" max="24" id="thHorizon" value="24"></div>
+          <div><label for="thAccelCrit">Accel. Critical (mm/h²)</label><input type="number" step="0.01" id="thAccelCrit" value="0.10"></div>
+          <div><label for="thWin1">Window 1 (menit)</label><input type="number" step="5" id="thWin1" value="30"></div>
+          <div><label for="thWin2">Window 2 (menit)</label><input type="number" step="5" id="thWin2" value="60"></div>
+          <div><label for="thWin3">Window 3 (menit)</label><input type="number" step="5" id="thWin3" value="120"></div>
+        </div>
+        <p class="modal-msg" id="thMsg"></p>
+      </div>
+      <div class="modal-foot">Perubahan langsung diterapkan ke seluruh perhitungan.</div>
+    </div>
+  </div>
+
+  <!-- ====== MODAL: EVENT LOG (TARP) ====== -->
+  <div class="modal-overlay" id="evModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="evTitle">
+      <div class="modal-head"><h3 id="evTitle">Event log (TARP)</h3><button type="button" class="modal-btn" id="btnEvClose">Close</button></div>
+      <div class="modal-body"><div id="eventLog"></div></div>
+      <div class="modal-foot" id="evCount">0 event</div>
+    </div>
+  </div>
+
+  <!-- ====== MODAL: EDIT DATA ====== -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <div class="modal-head"><h3 id="editTitle">Edit data <span id="editFileName"></span></h3><button type="button" class="modal-btn" id="btnModalClose">Close</button></div>
+      <div class="modal-body">
+        <p class="modal-msg" id="editMsg"></p>
+        <table class="edit-table">
+          <thead><tr><th><input type="checkbox" id="chkSelectAll" aria-label="Pilih semua"></th><th>#</th><th>Time</th><th>Disp (mm)</th><th>Vel (mm/h)</th><th>Inv (h/mm)</th><th>Accel (mm/h²)</th></tr></thead>
+          <tbody id="editTbody"></tbody>
+        </table>
+      </div>
+      <div class="modal-foot">
+        <span id="editCount"></span>
+        <span class="modal-actions">
+          <button type="button" class="modal-btn" id="btnDeleteSelected">Delete Selected</button>
+          <button type="button" class="modal-btn" id="btnRestoreOriginal">Restore Original</button>
+          <button type="button" class="modal-btn primary" id="btnOkApply">Apply</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== MODAL: PRATINJAU GAMBAR ====== -->
+  <div class="modal-overlay" id="imgModal">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="imgTitle">
+      <div class="modal-head"><h3 id="imgTitle">Pratinjau gambar</h3><button type="button" class="modal-btn" id="btnImgClose">Close</button></div>
+      <div class="modal-body"><img id="imgFull" class="img-full" alt="Pratinjau gambar"></div>
+    </div>
+  </div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
