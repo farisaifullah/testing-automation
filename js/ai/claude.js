@@ -1,4 +1,10 @@
-import { CLAUDE_API_KEY, CLAUDE_MODEL } from '../core/secrets.js'
+// secrets.js opsional: file ini tidak ikut ke repo/Netlify, jadi aplikasi harus tetap jalan tanpanya.
+const loadSecrets = async () => {
+  try {
+    const s = await import('../core/secrets.js')
+    return { key: s.CLAUDE_API_KEY || '', model: s.CLAUDE_MODEL || '' }
+  } catch (e) { return { key: '', model: '' } }
+}
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const DEFAULT_MAX_TOKENS = 4000
@@ -17,17 +23,18 @@ export const userMessage = content => [{ role: 'user', content }]
 
 // temperature: null = jangan kirim (model baru menolak parameter ini).
 export const askClaude = async ({ system, messages, maxTokens = DEFAULT_MAX_TOKENS, temperature = 0.2, model }) => {
-  if (!CLAUDE_API_KEY) throw new Error('API key Claude belum diisi (js/core/secrets.js).')
+  const secrets = await loadSecrets()
+  if (!secrets.key) throw new Error('API key Claude belum diisi (js/core/secrets.js).')
   const send = withTemperature => fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': CLAUDE_API_KEY,
+      'x-api-key': secrets.key,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify(Object.assign(
-      { model: model || CLAUDE_MODEL, max_tokens: maxTokens, system, messages },
+      { model: model || secrets.model || 'claude-sonnet-4-5-20250929', max_tokens: maxTokens, system, messages },
       withTemperature && temperature !== null && temperature !== undefined ? { temperature } : {}
     ))
   })
