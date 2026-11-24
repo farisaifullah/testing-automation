@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "TOF Remote Tab Finder",
+  "version": "1.0.0",
+  "description": "Membawa tab Chrome Remote Desktop (PC site) ke depan dari tombol Open E-Survey di dashboard TOF.",
+  "permissions": [
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.netlify.app/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
